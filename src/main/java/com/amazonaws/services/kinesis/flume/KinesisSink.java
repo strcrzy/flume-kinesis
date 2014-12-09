@@ -65,6 +65,8 @@ public class KinesisSink extends AbstractSink implements Configurable {
         context.getString("streamName"), "streamName is required");
 
     this.numberOfPartitions = context.getInteger("kinesisPartitions", DEFAULT_PARTITION_SIZE);
+    Preconditions.checkArgument(numberOfPartitions > 0,
+        "numberOfPartitions must be greater than 0");
 
     this.batchSize = context.getInteger("batchSize", DEFAULT_BATCH_SIZE);
     Preconditions.checkArgument(batchSize > 0 && batchSize <= 500,
