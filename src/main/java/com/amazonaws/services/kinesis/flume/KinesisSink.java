@@ -17,6 +17,9 @@ package com.amazonaws.services.kinesis.flume;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.List;
+
+import com.google.common.collect.Lists;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,8 +33,9 @@ import org.apache.flume.sink.AbstractSink;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
-import com.amazonaws.services.kinesis.model.PutRecordRequest;
-import com.amazonaws.services.kinesis.model.PutRecordResult;
+import com.amazonaws.services.kinesis.model.PutRecordsRequest;
+import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
+import com.amazonaws.services.kinesis.model.PutRecordsResult;
 
 public class KinesisSink extends AbstractSink implements Configurable {
   
@@ -42,6 +46,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
   static AmazonKinesisClient kinesisClient;
   private String numberOfPartitions;
   private String kinesisEndpoint;
+  private long batchSize;
   
   @Override
   public void configure(Context context) {
@@ -52,9 +57,15 @@ public class KinesisSink extends AbstractSink implements Configurable {
     this.streamName = context.getString("streamName", "defaultValue");
     LOG.info(streamName);
     this.kinesisEndpoint = context.getString("kinesisEndpoint","https://kinesis.us-east-1.amazonaws.com");
+    this.batchSize = context.getInteger("batchSize", 100);
     if (streamName.equals("defaultValue") || accessKey.equals("defaultValue")|| this.accessSecretKey.equals("defaultValue") || this.streamName.equals("defaultValue")){
       LOG.info("One Of The Required Config Param Is Missing: Accesseky,AccessSecretKey,StreamName");
       throw new Error();
+    }
+
+    if (batchSize < 1 || batchSize > 500) {
+      LOG.error("Batch size must be between 1 and 500");
+      throw new IllegalArgumentException("Batch size must be between 1 and 500");
     }
   }
 
@@ -75,17 +86,29 @@ public class KinesisSink extends AbstractSink implements Configurable {
     // Start transaction
     Channel ch = getChannel();
     Transaction txn = ch.getTransaction();
+    List<PutRecordsRequestEntry> records = Lists.newArrayList();
     txn.begin();
     try {
-   
-      Event event = ch.take();
-    
-      int partitionKey=new Random().nextInt(( Integer.valueOf(numberOfPartitions)- 1) + 1) + 1;
-      PutRecordRequest putRecordRequest = new PutRecordRequest();
-      putRecordRequest.setStreamName( this.streamName);
-      putRecordRequest.setData(ByteBuffer.wrap(event.getBody()));
-      putRecordRequest.setPartitionKey("partitionKey_"+partitionKey);
-      PutRecordResult putRecordResult = kinesisClient.putRecord(putRecordRequest);
+      int txnEventCount = 0;
+      for (txnEventCount = 0; txnEventCount < batchSize; txnEventCount++) {
+        Event event = ch.take();
+        if (event == null) {
+          break;
+        }
+
+        int partitionKey=new Random().nextInt(( Integer.valueOf(numberOfPartitions)- 1) + 1) + 1;
+        PutRecordsRequestEntry entry = new PutRecordsRequestEntry();
+        entry.setData(ByteBuffer.wrap(event.getBody()));
+        entry.setPartitionKey("partitionKey_"+partitionKey);
+        records.add(entry);
+      }
+
+      if (txnEventCount > 0) {
+        PutRecordsRequest putRecordsRequest = new PutRecordsRequest();
+        putRecordsRequest.setStreamName( this.streamName);
+        putRecordsRequest.setRecords(records);
+        PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
+      }
 
       txn.commit();
       status = Status.READY;
