@@ -20,18 +20,15 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
 
 public class RecordProcessorFactory implements IRecordProcessorFactory {
-    
+  ChannelProcessor chProcessor;
 
-	
-	ChannelProcessor chProcessor;
-    public RecordProcessorFactory(ChannelProcessor channelProcessor) {
-        super();
-        this.chProcessor = channelProcessor;
-    }
+  public RecordProcessorFactory(ChannelProcessor channelProcessor) {
+    super();
+    this.chProcessor = channelProcessor;
+  }
 
-    @Override
-    public IRecordProcessor createProcessor() {
-        return new FlumeSourceRecordProcessor(chProcessor);
-    }
-
+  @Override
+  public IRecordProcessor createProcessor() {
+    return new FlumeSourceRecordProcessor(chProcessor);
+  }
 }

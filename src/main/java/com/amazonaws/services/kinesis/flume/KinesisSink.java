@@ -33,7 +33,6 @@ import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.kinesis.model.PutRecordRequest;
 import com.amazonaws.services.kinesis.model.PutRecordResult;
 
-
 public class KinesisSink extends AbstractSink implements Configurable {
   
   private static final Log LOG = LogFactory.getLog(KinesisSink.class);
@@ -46,25 +45,23 @@ public class KinesisSink extends AbstractSink implements Configurable {
   
   @Override
   public void configure(Context context) {
-	
-	 this.accessKey = context.getString("accessKey", "defaultValue");
-	 this.accessSecretKey = context.getString("accessSecretKey", "defaultValue");
-	 this.numberOfPartitions = context.getString("kinesisPartitions", "1");
-	 this.streamName = context.getString("streamName", "defaultValue");
-	 LOG.info(streamName);
-	 this.kinesisEndpoint = context.getString("kinesisEndpoint","https://kinesis.us-east-1.amazonaws.com");
-	 if (streamName.equals("defaultValue") || accessKey.equals("defaultValue")|| this.accessSecretKey.equals("defaultValue") || this.streamName.equals("defaultValue")){
-		 LOG.info("One Of The Required Config Param Is Missing: Accesseky,AccessSecretKey,StreamName");
-		 throw new Error();
-	 }
+
+    this.accessKey = context.getString("accessKey", "defaultValue");
+    this.accessSecretKey = context.getString("accessSecretKey", "defaultValue");
+    this.numberOfPartitions = context.getString("kinesisPartitions", "1");
+    this.streamName = context.getString("streamName", "defaultValue");
+    LOG.info(streamName);
+    this.kinesisEndpoint = context.getString("kinesisEndpoint","https://kinesis.us-east-1.amazonaws.com");
+    if (streamName.equals("defaultValue") || accessKey.equals("defaultValue")|| this.accessSecretKey.equals("defaultValue") || this.streamName.equals("defaultValue")){
+      LOG.info("One Of The Required Config Param Is Missing: Accesseky,AccessSecretKey,StreamName");
+      throw new Error();
+    }
   }
 
   @Override
   public void start() {
-	  
-   kinesisClient = new AmazonKinesisClient(new BasicAWSCredentials(this.accessKey,this.accessSecretKey));
-   kinesisClient.setEndpoint(kinesisEndpoint);
-  
+    kinesisClient = new AmazonKinesisClient(new BasicAWSCredentials(this.accessKey,this.accessSecretKey));
+    kinesisClient.setEndpoint(kinesisEndpoint);
   }
 
   @Override
@@ -85,12 +82,12 @@ public class KinesisSink extends AbstractSink implements Configurable {
     
       int partitionKey=new Random().nextInt(( Integer.valueOf(numberOfPartitions)- 1) + 1) + 1;
       PutRecordRequest putRecordRequest = new PutRecordRequest();
-	  putRecordRequest.setStreamName( this.streamName);
-	  putRecordRequest.setData(ByteBuffer.wrap(event.getBody()));
-	  putRecordRequest.setPartitionKey("partitionKey_"+partitionKey);
-	  PutRecordResult putRecordResult = kinesisClient.putRecord(putRecordRequest);	
-	 
-	  txn.commit();
+      putRecordRequest.setStreamName( this.streamName);
+      putRecordRequest.setData(ByteBuffer.wrap(event.getBody()));
+      putRecordRequest.setPartitionKey("partitionKey_"+partitionKey);
+      PutRecordResult putRecordResult = kinesisClient.putRecord(putRecordRequest);
+
+      txn.commit();
       status = Status.READY;
     } catch (Throwable t) {
       txn.rollback();

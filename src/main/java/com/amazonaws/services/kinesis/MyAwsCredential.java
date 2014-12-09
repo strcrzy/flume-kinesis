@@ -20,23 +20,20 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 
 public class MyAwsCredential implements AWSCredentialsProvider{
-	
-	String accessKey;
-	String accessSecretKey;
-	
-	public MyAwsCredential(String accessKey,String accessSecretKey){
-		this.accessKey = accessKey;
-		this.accessSecretKey = accessSecretKey;
-	}
-	
-	@Override
-	public AWSCredentials getCredentials(){
-		return new BasicAWSCredentials(this.accessKey,this.accessSecretKey);
-	}
-	
-	@Override 
-	public void refresh() {
-		
-	}
+  String accessKey;
+  String accessSecretKey;
 
+  public MyAwsCredential(String accessKey,String accessSecretKey){
+    this.accessKey = accessKey;
+    this.accessSecretKey = accessSecretKey;
+  }
+
+  @Override
+  public AWSCredentials getCredentials(){
+    return new BasicAWSCredentials(this.accessKey,this.accessSecretKey);
+  }
+
+  @Override
+  public void refresh() {
+  }
 }
