@@ -31,6 +31,7 @@ import org.apache.flume.EventDeliveryException;
 import org.apache.flume.Transaction;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.sink.AbstractSink;
+import org.apache.flume.instrumentation.SinkCounter;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
@@ -45,6 +46,8 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private static final String DEFAULT_KINESIS_ENDPOINT = "https://kinesis.us-east-1.amazonaws.com";
   private static final int DEFAULT_PARTITION_SIZE = 1;
   private static final int DEFAULT_BATCH_SIZE = 100;
+
+  private SinkCounter sinkCounter;
 
   static AmazonKinesisClient kinesisClient;
   private String accessKey;
@@ -71,16 +74,22 @@ public class KinesisSink extends AbstractSink implements Configurable {
     this.batchSize = context.getInteger("batchSize", DEFAULT_BATCH_SIZE);
     Preconditions.checkArgument(batchSize > 0 && batchSize <= 500,
         "batchSize must be between 1 and 500");
+
+    if (sinkCounter == null) {
+      sinkCounter = new SinkCounter(getName());
+    }
   }
 
   @Override
   public void start() {
     kinesisClient = new AmazonKinesisClient(new BasicAWSCredentials(this.accessKey,this.accessSecretKey));
     kinesisClient.setEndpoint(kinesisEndpoint);
+    sinkCounter.start();
   }
 
   @Override
   public void stop () {
+    sinkCounter.stop();
   }
 
   @Override
@@ -107,10 +116,21 @@ public class KinesisSink extends AbstractSink implements Configurable {
       }
 
       if (txnEventCount > 0) {
+        if (txnEventCount == batchSize) {
+          sinkCounter.incrementBatchCompleteCount();
+
+        } else {
+          sinkCounter.incrementBatchUnderflowCount();
+        }
+
+        sinkCounter.addToEventDrainAttemptCount(txnEventCount);
         PutRecordsRequest putRecordsRequest = new PutRecordsRequest();
         putRecordsRequest.setStreamName( this.streamName);
         putRecordsRequest.setRecords(records);
         PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
+        sinkCounter.addToEventDrainSuccessCount(txnEventCount);
+      } else {
+        sinkCounter.incrementBatchEmptyCount();
       }
 
       txn.commit();
