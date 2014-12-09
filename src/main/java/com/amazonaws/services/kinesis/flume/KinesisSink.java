@@ -41,6 +41,11 @@ import com.amazonaws.services.kinesis.model.PutRecordsResult;
 public class KinesisSink extends AbstractSink implements Configurable {
   
   private static final Log LOG = LogFactory.getLog(KinesisSink.class);
+
+  private static final String DEFAULT_KINESIS_ENDPOINT = "https://kinesis.us-east-1.amazonaws.com";
+  private static final int DEFAULT_PARTITION_SIZE = 1;
+  private static final int DEFAULT_BATCH_SIZE = 100;
+
   static AmazonKinesisClient kinesisClient;
   private String accessKey;
   private String accessSecretKey;
@@ -59,9 +64,9 @@ public class KinesisSink extends AbstractSink implements Configurable {
     this.streamName = Preconditions.checkNotNull(
         context.getString("streamName"), "streamName is required");
 
-    this.numberOfPartitions = context.getInteger("kinesisPartitions", 1);
+    this.numberOfPartitions = context.getInteger("kinesisPartitions", DEFAULT_PARTITION_SIZE);
 
-    this.batchSize = context.getInteger("batchSize", 100);
+    this.batchSize = context.getInteger("batchSize", DEFAULT_BATCH_SIZE);
     Preconditions.checkArgument(batchSize > 0 && batchSize <= 500,
         "batchSize must be between 1 and 500");
   }
