@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import org.apache.commons.logging.Log;
@@ -40,33 +41,29 @@ import com.amazonaws.services.kinesis.model.PutRecordsResult;
 public class KinesisSink extends AbstractSink implements Configurable {
   
   private static final Log LOG = LogFactory.getLog(KinesisSink.class);
+  static AmazonKinesisClient kinesisClient;
   private String accessKey;
   private String accessSecretKey;
   private String streamName;
-  static AmazonKinesisClient kinesisClient;
-  private String numberOfPartitions;
   private String kinesisEndpoint;
-  private long batchSize;
+  private int numberOfPartitions;
+  private int batchSize;
   
   @Override
   public void configure(Context context) {
-
-    this.accessKey = context.getString("accessKey", "defaultValue");
-    this.accessSecretKey = context.getString("accessSecretKey", "defaultValue");
-    this.numberOfPartitions = context.getString("kinesisPartitions", "1");
-    this.streamName = context.getString("streamName", "defaultValue");
-    LOG.info(streamName);
     this.kinesisEndpoint = context.getString("kinesisEndpoint","https://kinesis.us-east-1.amazonaws.com");
-    this.batchSize = context.getInteger("batchSize", 100);
-    if (streamName.equals("defaultValue") || accessKey.equals("defaultValue")|| this.accessSecretKey.equals("defaultValue") || this.streamName.equals("defaultValue")){
-      LOG.info("One Of The Required Config Param Is Missing: Accesseky,AccessSecretKey,StreamName");
-      throw new Error();
-    }
+    this.accessKey = Preconditions.checkNotNull(
+        context.getString("accessKey"), "accessKey is required");
+    this.accessSecretKey = Preconditions.checkNotNull(
+        context.getString("accessSecretKey"), "accessSecretKey is required");
+    this.streamName = Preconditions.checkNotNull(
+        context.getString("streamName"), "streamName is required");
 
-    if (batchSize < 1 || batchSize > 500) {
-      LOG.error("Batch size must be between 1 and 500");
-      throw new IllegalArgumentException("Batch size must be between 1 and 500");
-    }
+    this.numberOfPartitions = context.getInteger("kinesisPartitions", 1);
+
+    this.batchSize = context.getInteger("batchSize", 100);
+    Preconditions.checkArgument(batchSize > 0 && batchSize <= 500,
+        "batchSize must be between 1 and 500");
   }
 
   @Override
@@ -83,7 +80,6 @@ public class KinesisSink extends AbstractSink implements Configurable {
   public Status process() throws EventDeliveryException {
     Status status = null;
 
-    // Start transaction
     Channel ch = getChannel();
     Transaction txn = ch.getTransaction();
     List<PutRecordsRequestEntry> records = Lists.newArrayList();
@@ -96,7 +92,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
           break;
         }
 
-        int partitionKey=new Random().nextInt(( Integer.valueOf(numberOfPartitions)- 1) + 1) + 1;
+        int partitionKey=new Random().nextInt(( numberOfPartitions - 1) + 1) + 1;
         PutRecordsRequestEntry entry = new PutRecordsRequestEntry();
         entry.setData(ByteBuffer.wrap(event.getBody()));
         entry.setPartitionKey("partitionKey_"+partitionKey);
@@ -116,7 +112,6 @@ public class KinesisSink extends AbstractSink implements Configurable {
       txn.rollback();
       LOG.error("Failed to commit transaction. Transaction rolled back. ", t);
       status = Status.BACKOFF;
-      // re-throw all Errors
       if (t instanceof Error) {
         throw (Error)t;
       } else {

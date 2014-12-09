@@ -18,6 +18,9 @@ package com.amazonaws.services.kinesis.flume;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.UUID;
+
+import com.google.common.base.Preconditions;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.flume.Context;
@@ -50,7 +53,6 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
   private String applicationName;
   private String streamName;
   private String kinesisEndpoint = DEFAULT_KINESIS_ENDPOINT;
-  //private InitialPositionInStream initialPositionInStream = DEFAULT_INITIAL_POSITION;
   private String initialPosition;
 
   private KinesisClientLibConfiguration kinesisClientLibConfiguration;
@@ -59,13 +61,16 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
 
   @Override
   public void configure(Context context) {
-
-    this.accessKey = context.getString("accessKey", "defaultValue");
-    this.accessSecretKey = context.getString("accessSecretKey", "defaultValue");
-
-    this.applicationName = context.getString("kinesisApplicationName", "defaultValue");
-    this.streamName = context.getString("kinesisStreamName", "defaultValue");
     this.kinesisEndpoint = context.getString("kinesisEndpoint", DEFAULT_KINESIS_ENDPOINT);
+    this.accessKey = Preconditions.checkNotNull(
+        context.getString("accessKey"), "accessKey is required");
+    this.accessSecretKey = Preconditions.checkNotNull(
+        context.getString("accessSecretKey"), "accessSecretKey is required");
+    this.streamName = Preconditions.checkNotNull(
+        context.getString("kinesisStreamName"), "kinesisStreamName is required");
+    this.applicationName = Preconditions.checkNotNull(
+        context.getString("kinesisApplicationName"), "kinesisApplicationName is required");
+
     this.initialPosition = context.getString("initialPosition", "TRIM_HORIZON");
     String workerId=null;
 
