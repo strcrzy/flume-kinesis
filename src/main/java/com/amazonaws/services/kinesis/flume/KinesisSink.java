@@ -128,6 +128,10 @@ public class KinesisSink extends AbstractSink implements Configurable {
         putRecordsRequest.setStreamName( this.streamName);
         putRecordsRequest.setRecords(records);
         PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
+        int failedCount = putRecordsResult.getFailedRecordCount();
+        if (failedCount > 0) {
+          LOG.error("Failed to sink " + failedCount + " records!");
+        }
         sinkCounter.addToEventDrainSuccessCount(txnEventCount);
       } else {
         sinkCounter.incrementBatchEmptyCount();
