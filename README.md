@@ -2,6 +2,9 @@
 
 Amazon Kinesis Source and Sink for Apache Flume
 
+This was originally forked from: https://github.com/pdeyhim/flume-kinesis.  This version is updated
+for newer version of the AWS API.
+
 ## Building and installation
 
 ```
