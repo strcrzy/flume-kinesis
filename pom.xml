@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>flume-kinesis</groupId>
   <artifactId>flume-kinesis</artifactId>
-  <version>0.0.2-SNAPSHOT</version>
+  <version>0.0.3-SNAPSHOT</version>
   <dependencies>
     <dependency>
       <groupId>org.apache.flume</groupId>
@@ -40,6 +40,7 @@
     <connection>scm:git:git@github.com:sharethrough/flume-kinesis</connection>
     <developerConnection>scm:git:git@github.com:sharethrough/flume-kinesis</developerConnection>
     <url>https://github.com/sharethrough/flume-kinesis</url>
+    <tag>HEAD</tag>
   </scm>
   <build>
     <plugins>
