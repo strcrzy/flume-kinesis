@@ -20,6 +20,27 @@
       <version>1.0.0</version>
     </dependency>
   </dependencies>
+
+  <distributionManagement>
+    <repository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>sharethrough</id>
+      <name>libs-releases</name>
+      <url>http://sharethrough.artifactoryonline.com/sharethrough/libs-releases-local</url>
+    </repository>
+    <snapshotRepository>
+      <uniqueVersion>true</uniqueVersion>
+      <id>sharethrough</id>
+      <name>libs-snapshots</name>
+      <url>http://sharethrough.artifactoryonline.com/sharethrough/libs-snapshots-local</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <scm>
+    <connection>scm:git:git://github.com:sharethrough/flume-kinesis</connection>
+    <developerConnection>scm:git:git://github.com:sharethrough/flume-kinesis</developerConnection>
+    <url>https://github.com/sharethrough/flume-kinesis</url>
+  </scm>
   <build>
     <plugins>
       <plugin>
