@@ -131,6 +131,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
         int failedCount = putRecordsResult.getFailedRecordCount();
         if (failedCount > 0) {
           LOG.error("Failed to sink " + failedCount + " records!");
+          sinkCounter.incrementConnectionFailedCount();
         }
         sinkCounter.addToEventDrainSuccessCount(txnEventCount);
       } else {
