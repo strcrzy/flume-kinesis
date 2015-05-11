@@ -37,8 +37,8 @@
   </distributionManagement>
 
   <scm>
-    <connection>scm:git:git://github.com:sharethrough/flume-kinesis</connection>
-    <developerConnection>scm:git:git://github.com:sharethrough/flume-kinesis</developerConnection>
+    <connection>scm:git:git@github.com:sharethrough/flume-kinesis</connection>
+    <developerConnection>scm:git:git@github.com:sharethrough/flume-kinesis</developerConnection>
     <url>https://github.com/sharethrough/flume-kinesis</url>
   </scm>
   <build>
