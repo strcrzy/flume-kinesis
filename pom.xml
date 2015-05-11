@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>flume-kinesis</groupId>
   <artifactId>flume-kinesis</artifactId>
-  <version>0.0.4-SNAPSHOT</version>
+  <version>0.0.5-SNAPSHOT</version>
   <dependencies>
     <dependency>
       <groupId>org.apache.flume</groupId>
