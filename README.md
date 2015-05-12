@@ -35,6 +35,7 @@ Check the examples under `conf/` for specific examples.  All values without defa
 |accessKey|null|AWS Access Key ID|
 |secretAccessKey|null|AWS Secret Access Key|
 |streamName|null|name of Kinesis stream|
-|kinesisPartitions|1|number of Kinesis partitions|
+|kinesisPartitions|1|number of Kinesis partitions.  Set this much higher than actual number of shards to get better uniforimity when sinking across shards.|
 |batchSize|100|max number of events to send per API call to Kinesis.  Must be between 1 and 500.|
+|maxAttempts|100|max number of times to attempt to send events.  After this the batch will be considered failed.  Must be >= 1.|
 

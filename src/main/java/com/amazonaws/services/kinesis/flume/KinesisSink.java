@@ -18,6 +18,7 @@ package com.amazonaws.services.kinesis.flume;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.List;
+import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -38,6 +39,7 @@ import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
+import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
 
 public class KinesisSink extends AbstractSink implements Configurable {
   
@@ -46,6 +48,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private static final String DEFAULT_KINESIS_ENDPOINT = "https://kinesis.us-east-1.amazonaws.com";
   private static final int DEFAULT_PARTITION_SIZE = 1;
   private static final int DEFAULT_BATCH_SIZE = 100;
+  private static final int DEFAULT_MAX_ATTEMPTS = 100;
 
   private SinkCounter sinkCounter;
 
@@ -56,6 +59,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private String kinesisEndpoint;
   private int numberOfPartitions;
   private int batchSize;
+  private int maxAttempts;
   
   @Override
   public void configure(Context context) {
@@ -74,6 +78,10 @@ public class KinesisSink extends AbstractSink implements Configurable {
     this.batchSize = context.getInteger("batchSize", DEFAULT_BATCH_SIZE);
     Preconditions.checkArgument(batchSize > 0 && batchSize <= 500,
         "batchSize must be between 1 and 500");
+
+    this.maxAttempts = context.getInteger("maxAttempts", DEFAULT_MAX_ATTEMPTS);
+    Preconditions.checkArgument(maxAttempts > 0,
+        "maxAttempts must be greater than 0");
 
     if (sinkCounter == null) {
       sinkCounter = new SinkCounter(getName());
@@ -98,10 +106,11 @@ public class KinesisSink extends AbstractSink implements Configurable {
 
     Channel ch = getChannel();
     Transaction txn = ch.getTransaction();
-    List<PutRecordsRequestEntry> records = Lists.newArrayList();
+    List<PutRecordsRequestEntry> putRecordsRequestEntryList = Lists.newArrayList();
     txn.begin();
     try {
       int txnEventCount = 0;
+      int attemptCount = 1;
       for (txnEventCount = 0; txnEventCount < batchSize; txnEventCount++) {
         Event event = ch.take();
         if (event == null) {
@@ -112,7 +121,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
         PutRecordsRequestEntry entry = new PutRecordsRequestEntry();
         entry.setData(ByteBuffer.wrap(event.getBody()));
         entry.setPartitionKey("partitionKey_"+partitionKey);
-        records.add(entry);
+        putRecordsRequestEntryList.add(entry);
       }
 
       if (txnEventCount > 0) {
@@ -126,14 +135,33 @@ public class KinesisSink extends AbstractSink implements Configurable {
         sinkCounter.addToEventDrainAttemptCount(txnEventCount);
         PutRecordsRequest putRecordsRequest = new PutRecordsRequest();
         putRecordsRequest.setStreamName( this.streamName);
-        putRecordsRequest.setRecords(records);
+        putRecordsRequest.setRecords(putRecordsRequestEntryList);
         PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
-        int failedCount = putRecordsResult.getFailedRecordCount();
-        if (failedCount > 0) {
-          LOG.error("Failed to sink " + failedCount + " records!");
+
+        while (putRecordsResult.getFailedRecordCount() > 0 && attemptCount < maxAttempts) {
+          LOG.warn("Failed to sink " + putRecordsResult.getFailedRecordCount() + " records on attempt " + attemptCount + " of " + maxAttempts);
+          final List<PutRecordsRequestEntry> failedRecordsList = new ArrayList<>();
+          final List<PutRecordsResultEntry> putRecordsResultEntryList = putRecordsResult.getRecords();
+          for (int i = 0; i < putRecordsResultEntryList.size(); i++) {
+            final PutRecordsRequestEntry putRecordRequestEntry = putRecordsRequestEntryList.get(i);
+            final PutRecordsResultEntry putRecordsResultEntry = putRecordsResultEntryList.get(i);
+            if (putRecordsResultEntry.getErrorCode() != null) {
+              failedRecordsList.add(putRecordRequestEntry);
+            }
+          }
+          putRecordsRequestEntryList = failedRecordsList;
+          putRecordsRequest.setRecords(putRecordsRequestEntryList);
+          putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
+          attemptCount++;
+        }
+
+        if (putRecordsResult.getFailedRecordCount() > 0) {
+          LOG.error("Failed to sink " + putRecordsResult.getFailedRecordCount() + " records after " + attemptCount + " out of " + maxAttempts + " attempt(s)");
           sinkCounter.incrementConnectionFailedCount();
         }
-        sinkCounter.addToEventDrainSuccessCount(txnEventCount);
+
+        int successfulRecords = txnEventCount = putRecordsResult.getFailedRecordCount();
+        sinkCounter.addToEventDrainSuccessCount(successfulRecords);
       } else {
         sinkCounter.incrementBatchEmptyCount();
       }
