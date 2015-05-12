@@ -167,7 +167,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
       }
 
       txn.commit();
-      status = Status.READY;
+      status = txnEventCount == 0 ? Status.BACKOFF : Status.READY;
     } catch (Throwable t) {
       txn.rollback();
       LOG.error("Failed to commit transaction. Transaction rolled back. ", t);
