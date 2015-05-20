@@ -49,6 +49,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private static final int DEFAULT_PARTITION_SIZE = 1;
   private static final int DEFAULT_BATCH_SIZE = 100;
   private static final int DEFAULT_MAX_ATTEMPTS = 100;
+  private static final boolean DEFAULT_ROLLBACK_AFTER_MAX_ATTEMPTS = false;
 
   private SinkCounter sinkCounter;
 
@@ -60,6 +61,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private int numberOfPartitions;
   private int batchSize;
   private int maxAttempts;
+  private boolean rollbackAfterMaxAttempts;
   
   @Override
   public void configure(Context context) {
@@ -82,6 +84,8 @@ public class KinesisSink extends AbstractSink implements Configurable {
     this.maxAttempts = context.getInteger("maxAttempts", DEFAULT_MAX_ATTEMPTS);
     Preconditions.checkArgument(maxAttempts > 0,
         "maxAttempts must be greater than 0");
+
+    this.rollbackAfterMaxAttempts = context.getBoolean("rollbackAfterMaxAttempts", DEFAULT_ROLLBACK_AFTER_MAX_ATTEMPTS);
 
     if (sinkCounter == null) {
       sinkCounter = new SinkCounter(getName());
@@ -111,6 +115,8 @@ public class KinesisSink extends AbstractSink implements Configurable {
     try {
       int txnEventCount = 0;
       int attemptCount = 1;
+      int failedTxnEventCount = 0;
+
       for (txnEventCount = 0; txnEventCount < batchSize; txnEventCount++) {
         Event event = ch.take();
         if (event == null) {
@@ -148,14 +154,21 @@ public class KinesisSink extends AbstractSink implements Configurable {
           sinkCounter.incrementConnectionFailedCount();
         }
 
-        int successfulRecords = txnEventCount - putRecordsResult.getFailedRecordCount();
-        sinkCounter.addToEventDrainSuccessCount(successfulRecords);
+        failedTxnEventCount = putRecordsResult.getFailedRecordCount();
+        int successfulTxnEventCount = txnEventCount - failedTxnEventCount;
+        sinkCounter.addToEventDrainSuccessCount(successfulTxnEventCount);
       } else {
         sinkCounter.incrementBatchEmptyCount();
       }
 
-      txn.commit();
-      status = txnEventCount == 0 ? Status.BACKOFF : Status.READY;
+      if (failedTxnEventCount > 0 && this.rollbackAfterMaxAttempts) {
+        txn.rollback();
+        LOG.error("Failed to commit transaction after max attempts reached. Transaction rolled back.");
+        status = Status.BACKOFF;
+      } else {
+        txn.commit();
+        status = txnEventCount == 0 ? Status.BACKOFF : Status.READY;
+      }
     } catch (Throwable t) {
       txn.rollback();
       LOG.error("Failed to commit transaction. Transaction rolled back. ", t);
