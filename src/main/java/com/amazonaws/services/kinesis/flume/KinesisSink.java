@@ -116,11 +116,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
         if (event == null) {
           break;
         }
-
-        int partitionKey=new Random().nextInt(( numberOfPartitions - 1) + 1) + 1;
-        PutRecordsRequestEntry entry = new PutRecordsRequestEntry();
-        entry.setData(ByteBuffer.wrap(event.getBody()));
-        entry.setPartitionKey("partitionKey_"+partitionKey);
+        PutRecordsRequestEntry entry = buildRequestEntry(event);
         putRecordsRequestEntryList.add(entry);
       }
 
@@ -132,25 +128,17 @@ public class KinesisSink extends AbstractSink implements Configurable {
           sinkCounter.incrementBatchUnderflowCount();
         }
 
-        sinkCounter.addToEventDrainAttemptCount(txnEventCount);
         PutRecordsRequest putRecordsRequest = new PutRecordsRequest();
         putRecordsRequest.setStreamName( this.streamName);
         putRecordsRequest.setRecords(putRecordsRequestEntryList);
+
+        sinkCounter.addToEventDrainAttemptCount(putRecordsRequest.getRecords().size());
         PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
 
         while (putRecordsResult.getFailedRecordCount() > 0 && attemptCount < maxAttempts) {
           LOG.warn("Failed to sink " + putRecordsResult.getFailedRecordCount() + " records on attempt " + attemptCount + " of " + maxAttempts);
-          final List<PutRecordsRequestEntry> failedRecordsList = new ArrayList<>();
-          final List<PutRecordsResultEntry> putRecordsResultEntryList = putRecordsResult.getRecords();
-          for (int i = 0; i < putRecordsResultEntryList.size(); i++) {
-            final PutRecordsRequestEntry putRecordRequestEntry = putRecordsRequestEntryList.get(i);
-            final PutRecordsResultEntry putRecordsResultEntry = putRecordsResultEntryList.get(i);
-            if (putRecordsResultEntry.getErrorCode() != null) {
-              failedRecordsList.add(putRecordRequestEntry);
-            }
-          }
-          putRecordsRequestEntryList = failedRecordsList;
-          putRecordsRequest.setRecords(putRecordsRequestEntryList);
+          List<PutRecordsRequestEntry> failedRecordsList = getFailedRecordsFromResult(putRecordsResult, putRecordsRequestEntryList);
+          putRecordsRequest.setRecords(failedRecordsList);
           putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
           attemptCount++;
         }
@@ -181,5 +169,28 @@ public class KinesisSink extends AbstractSink implements Configurable {
       txn.close();
     }
     return status;
+  }
+
+  public PutRecordsRequestEntry buildRequestEntry(Event event) {
+    int partitionKey=new Random().nextInt(( numberOfPartitions - 1) + 1) + 1;
+    PutRecordsRequestEntry entry = new PutRecordsRequestEntry();
+    entry.setData(ByteBuffer.wrap(event.getBody()));
+    entry.setPartitionKey("partitionKey_"+partitionKey);
+    return entry;
+  }
+
+  public List<PutRecordsRequestEntry> getFailedRecordsFromResult(PutRecordsResult putRecordsResult, List<PutRecordsRequestEntry> putRecordsRequestEntryList) {
+    List<PutRecordsRequestEntry> failedRecordsList = new ArrayList<>();
+    List<PutRecordsResultEntry> putRecordsResultEntryList = putRecordsResult.getRecords();
+
+    for (int i = 0; i < putRecordsResultEntryList.size(); i++) {
+      PutRecordsRequestEntry putRecordRequestEntry = putRecordsRequestEntryList.get(i);
+      PutRecordsResultEntry putRecordsResultEntry = putRecordsResultEntryList.get(i);
+      if (putRecordsResultEntry.getErrorCode() != null) {
+        failedRecordsList.add(putRecordRequestEntry);
+      }
+    }
+
+    return failedRecordsList;
   }
 }
