@@ -51,31 +51,30 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
   private InitialPositionInStream DEFAULT_INITIAL_POSITION = InitialPositionInStream.TRIM_HORIZON;
   private static final String DEFAULT_KINESIS_ENDPOINT = "https://kinesis.us-east-1.amazonaws.com";
 
-  private String applicationName;
-  private String streamName;
-  private String kinesisEndpoint;
-  private String initialPosition;
-
   private KinesisClientLibConfiguration kinesisClientLibConfiguration;
-  private String accessKey;
-  private String accessSecretKey;
+  private String accessKeyId;
+  private String secretAccessKey;
+  private String streamName;
+  private String applicationName;
+  private String endpoint;
+  private String initialPosition;
 
   @Override
   public void configure(Context context) {
-    this.kinesisEndpoint = context.getString("kinesisEndpoint", DEFAULT_KINESIS_ENDPOINT);
-    this.accessKey = Preconditions.checkNotNull(
-        context.getString("accessKey"), "accessKey is required");
-    this.accessSecretKey = Preconditions.checkNotNull(
-        context.getString("accessSecretKey"), "accessSecretKey is required");
+    this.endpoint = context.getString("endpoint", DEFAULT_KINESIS_ENDPOINT);
+    this.accessKeyId = Preconditions.checkNotNull(
+        context.getString("accessKeyId"), "accessKeyId is required");
+    this.secretAccessKey = Preconditions.checkNotNull(
+        context.getString("secretAccessKey"), "secretAccessKey is required");
     this.streamName = Preconditions.checkNotNull(
-        context.getString("kinesisStreamName"), "kinesisStreamName is required");
+        context.getString("streamName"), "streamName is required");
     this.applicationName = Preconditions.checkNotNull(
-        context.getString("kinesisApplicationName"), "kinesisApplicationName is required");
+        context.getString("applicationName"), "applicationName is required");
 
     this.initialPosition = context.getString("initialPosition", "TRIM_HORIZON");
     String workerId=null;
 
-    if (initialPosition.equals("LATEST")){
+    if (this.initialPosition.equals("LATEST")){
       DEFAULT_INITIAL_POSITION=InitialPositionInStream.LATEST;
     }
 
@@ -90,7 +89,7 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
     } catch (AmazonClientException e) {
       LOG.info("Unable to obtain credentials from the IMDS, trying classpath properties", e);
 
-      credentialsProvider = new MyAwsCredential(accessKey,accessSecretKey);
+      credentialsProvider = new MyAwsCredential(this.accessKeyId,this.secretAccessKey);
       credentialsProvider.getCredentials();
 
       LOG.info("Obtained credentials from the properties file.");
@@ -104,9 +103,9 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
 
     LOG.info("Using workerId: " + workerId);
 
-    kinesisClientLibConfiguration = new KinesisClientLibConfiguration(applicationName, streamName,
+    kinesisClientLibConfiguration = new KinesisClientLibConfiguration(this.applicationName, this.streamName,
         credentialsProvider, workerId).
-        withKinesisEndpoint(kinesisEndpoint).
+        withKinesisEndpoint(this.endpoint).
         withInitialPositionInStream(DEFAULT_INITIAL_POSITION);
 
   }
