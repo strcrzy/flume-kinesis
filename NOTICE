@@ -1,0 +1,19 @@
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+
+AWS SDK for Java
+http://aws.amazon.com/sdk-for-java/
+Copyright 2010-2014 Amazon.com, Inc. or its affiliates.
+Apache License, Version 2.0
+
+Amazon Kinesis Client
+https://github.com/awslabs/amazon-kinesis-client
+Copyright 2012-2014 Amazon.com, Inc. or its affiliates.
+Amazon Software License
+
+Apache Flume
+https://flume.apache.org/
+Copyright 2012 The Apache Software Foundation
+Apache License, Version 2.0
