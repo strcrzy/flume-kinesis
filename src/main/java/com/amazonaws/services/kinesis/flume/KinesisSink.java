@@ -51,6 +51,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private static final int DEFAULT_BATCH_SIZE = 100;
   private static final int DEFAULT_MAX_ATTEMPTS = 100;
   private static final boolean DEFAULT_ROLLBACK_AFTER_MAX_ATTEMPTS = false;
+  private static final long BACKOFF_TIME_IN_MILLIS = 100L;
 
   private SinkCounter sinkCounter;
 
@@ -144,6 +145,13 @@ public class KinesisSink extends AbstractSink implements Configurable {
 
         while (putRecordsResult.getFailedRecordCount() > 0 && attemptCount < maxAttempts) {
           LOG.warn("Failed to sink " + putRecordsResult.getFailedRecordCount() + " records on attempt " + attemptCount + " of " + maxAttempts);
+
+          try {
+            Thread.sleep(BACKOFF_TIME_IN_MILLIS);
+          } catch (InterruptedException e) {
+            LOG.debug("Interrupted sleep", e);
+          }
+
           List<PutRecordsRequestEntry> failedRecordsList = getFailedRecordsFromResult(putRecordsResult, putRecordsRequestEntryList);
           putRecordsRequest.setRecords(failedRecordsList);
           putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
