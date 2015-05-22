@@ -4,20 +4,20 @@ node1.channels = diskchannel
 
 ## Source
 node1.sources.KinesisSource.type = com.amazonaws.services.kinesis.flume.KinesisSource
-node1.sources.KinesisSource.accessKey = 
-node1.sources.KinesisSource.accessSecretKey= 
-node1.sources.KinesisSource.kinesisApplicationName=FlumeSource
-node1.sources.KinesisSource.kinesisStreamName=myLargeStream
-node1.sources.KinesisSource.initialPosition=TRIM_HORIZON
-node1.sources.KinesisSource.kinesisEndpoint=https://kinesis.us-east-1.amazonaws.com
+node1.sources.KinesisSource.accessKeyId =
+node1.sources.KinesisSource.secretAccessKey =
+node1.sources.KinesisSource.applicationName = FlumeSource
+node1.sources.KinesisSource.streamName = myLargeStream
+node1.sources.KinesisSource.initialPosition = TRIM_HORIZON
+node1.sources.KinesisSource.endpoint = https://kinesis.us-east-1.amazonaws.com
 
 ## Sink
 node1.sinks.KinesisSink.type = com.amazonaws.services.kinesis.flume.KinesisSink 
-node1.sinks.KinesisSink.accessKey=  
-node1.sinks.KinesisSink.accessSecretKey = 
-node1.sinks.KinesisSink.kinesisPartitions = 2
+node1.sinks.KinesisSink.accessKeyId =
+node1.sinks.KinesisSink.secretAccessKey =
+node1.sinks.KinesisSink.numberOfPartitions = 2
 node1.sinks.KinesisSink.streamName = mySecondLargeStream 
-node1.sinks.KinesisSink.kinesisEndpoint=https://kinesis.us-east-1.amazonaws.com
+node1.sinks.KinesisSink.endpoint = https://kinesis.us-east-1.amazonaws.com
 
 #i# Use a channel which buffers events in memory
 node1.channels.diskchannel.type = file 

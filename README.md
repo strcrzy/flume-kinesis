@@ -31,7 +31,7 @@ Check the examples under `conf/` for specific examples.  All values without defa
 
 |Name|Default|Description|
 -------|-----------|-------------|
-|kinesisEndpoint|https://kinesis.us-east-1.amazonaws.com|endpoint to access kinesis|
+|endpoint|https://kinesis.us-east-1.amazonaws.com|endpoint to access kinesis|
 |accessKeyId|null|AWS Access Key ID|
 |secretAccessKey|null|AWS Secret Access Key|
 |streamName|null|name of Kinesis stream|

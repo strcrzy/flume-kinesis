@@ -9,11 +9,11 @@ node1.sources.netcat.port = 44444
 
 ## Sink
 node1.sinks.KinesisSink.type = com.amazonaws.services.kinesis.flume.KinesisSink 
-node1.sinks.KinesisSink.accessKey=  
-node1.sinks.KinesisSink.accessSecretKey = 
-node1.sinks.KinesisSink.kinesisPartitions = 2
+node1.sinks.KinesisSink.accessKeyId =
+node1.sinks.KinesisSink.secretAccessKey =
+node1.sinks.KinesisSink.numberOfPartitions = 2
 node1.sinks.KinesisSink.streamName = mySecondLargeStream 
-node1.sinks.KinesisSink.kinesisEndpoint=https://kinesis.us-east-1.amazonaws.com
+node1.sinks.KinesisSink.endpoint = https://kinesis.us-east-1.amazonaws.com
 
 #i# Use a channel which buffers events in memory
 node1.channels.diskchannel.type = file 
