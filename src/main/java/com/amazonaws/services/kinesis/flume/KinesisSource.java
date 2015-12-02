@@ -31,10 +31,8 @@ import org.apache.flume.conf.Configurable;
 import org.apache.flume.source.AbstractSource;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
-import com.amazonaws.services.kinesis.MyAwsCredential;
 import com.amazonaws.services.kinesis.RecordProcessorFactory;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
@@ -63,10 +61,6 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
   @Override
   public void configure(Context context) {
     this.endpoint = context.getString("endpoint", DEFAULT_KINESIS_ENDPOINT);
-    this.accessKeyId = Preconditions.checkNotNull(
-        context.getString("accessKeyId"), "accessKeyId is required");
-    this.secretAccessKey = Preconditions.checkNotNull(
-        context.getString("secretAccessKey"), "secretAccessKey is required");
     this.streamName = Preconditions.checkNotNull(
         context.getString("streamName"), "streamName is required");
     this.applicationName = Preconditions.checkNotNull(
@@ -79,23 +73,6 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
       DEFAULT_INITIAL_POSITION=InitialPositionInStream.LATEST;
     }
 
-    AWSCredentialsProvider credentialsProvider = null;
-    try {
-
-      credentialsProvider = new InstanceProfileCredentialsProvider();
-      // Verify we can fetch credentials from the provider
-      credentialsProvider.getCredentials();
-      LOG.info("Obtained credentials from the IMDS.");
-
-    } catch (AmazonClientException e) {
-      LOG.info("Unable to obtain credentials from the IMDS, trying classpath properties", e);
-
-      credentialsProvider = new MyAwsCredential(this.accessKeyId,this.secretAccessKey);
-      credentialsProvider.getCredentials();
-
-      LOG.info("Obtained credentials from the properties file.");
-    }
-
     try {
       workerId = InetAddress.getLocalHost().getCanonicalHostName() + ":" + UUID.randomUUID();
     } catch (UnknownHostException e) {
@@ -105,7 +82,7 @@ public class KinesisSource extends AbstractSource implements Configurable, Polla
     LOG.info("Using workerId: " + workerId);
 
     kinesisClientLibConfiguration = new KinesisClientLibConfiguration(this.applicationName, this.streamName,
-        credentialsProvider, workerId).
+        new DefaultAWSCredentialsProviderChain(), workerId).
         withKinesisEndpoint(this.endpoint).
         withInitialPositionInStream(DEFAULT_INITIAL_POSITION);
 

@@ -35,7 +35,6 @@ import org.apache.flume.conf.Configurable;
 import org.apache.flume.sink.AbstractSink;
 import org.apache.flume.instrumentation.SinkCounter;
 
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
@@ -56,8 +55,6 @@ public class KinesisSink extends AbstractSink implements Configurable {
   private SinkCounter sinkCounter;
 
   static AmazonKinesisClient kinesisClient;
-  private String accessKeyId;
-  private String secretAccessKey;
   private String streamName;
   private String endpoint;
   private int numberOfPartitions;
@@ -68,10 +65,6 @@ public class KinesisSink extends AbstractSink implements Configurable {
   @Override
   public void configure(Context context) {
     this.endpoint = context.getString("endpoint", "https://kinesis.us-east-1.amazonaws.com");
-    this.accessKeyId = Preconditions.checkNotNull(
-        context.getString("accessKeyId"), "accessKeyId is required");
-    this.secretAccessKey = Preconditions.checkNotNull(
-        context.getString("secretAccessKey"), "secretAccessKey is required");
     this.streamName = Preconditions.checkNotNull(
         context.getString("streamName"), "streamName is required");
 
@@ -96,7 +89,7 @@ public class KinesisSink extends AbstractSink implements Configurable {
 
   @Override
   public void start() {
-    kinesisClient = new AmazonKinesisClient(new BasicAWSCredentials(this.accessKeyId,this.secretAccessKey));
+    kinesisClient = new AmazonKinesisClient();
     kinesisClient.setEndpoint(this.endpoint);
     sinkCounter.start();
   }
